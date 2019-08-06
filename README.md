@@ -1,8 +1,22 @@
 
+### Questions
+- GraphViz
+- Gini Index
+- Tuning hyperparameters
+
 ### Objectives
 * Build a decision tree classifier using sklearn
 * Analyze and improve decision tree classifier iteratively
 * Apply best practices to decision trees
+
+### What are the parts of a decision tree?
+- Root Node
+    - A Node splits the data based on a feature and a feature-value
+    - How do we determine which feature to use for the root node?
+        - The feature that has the highest correlation with our target
+        - The feature that has the lowest gini index
+- Branches (edges)
+- Leaf Nodes
 
 ### What is a Gini Index and What is Entropy?
 * Entropy - Checking for how messy data is...looking at how many different classifiers are in a population of data.
@@ -15,6 +29,51 @@
 * What is typically picked for the Root Node of a Decision Tree
     * 'Best Predictor' - Whatever feature is most important ~ feature with the highest purity (information gain)
 * After that your splits should have higher purity as the tree goes down.
+
+
+```python
+# Calcualte the gini index for humidity (high normal)
+# gini index -> purity of a split (are we dividing play_yes and play_no well?)
+# 0 = normal, 1 = high
+no_play_humidity = [1, 1, 0, 1, 1] 
+yes_play_humidity = [1, 1, 0, 0, 0, 0, 0, 1, 0] 
+
+
+# P(normal humidity|no play)
+no_normal = 0.20 # 1 out 5 -> 0.20^2 = 0.04
+# P(high humidity | no play) 
+no_high = 0.80 # 4 out of 5 -> 0.80^2 = 0.64
+
+# P(normal humdity | yes play)
+yes_normal = 6.0/9.0 # 0.6666....
+# P(high humidity | yes play)
+yes_high = 3.0/9.0 # 0.33333.....
+
+
+# Weights the larger probabilities
+# if g << 1 both numbers must be small (close)
+# if g ~ 1 one condition has really high probability
+g_nos = no_normal**2 + no_high**2  # 0.68
+
+
+
+# g ~ 1 both numbers must be small (close)
+# g ~ 0 one condition has really high probability
+g_nos = 1 - g_nos
+
+g_yes = yes_normal**2 + yes_high**2 # 0.5555....
+g_yes = 1 - g_yes
+
+
+# gini ~ 1 this means really really impure split
+# gini ~ 0 this means really really pure split
+# weighted average
+gini = g_nos * (5/14) + g_yes*(9/14)
+print("g_humid = {}".format(gini))
+```
+
+    g_humid = 0.3999999999999999
+
 
 ### Outline
 * Discuss Gini Index/Entropy
@@ -253,17 +312,17 @@ xtrain, xtest, ytrain, ytest = train_test_split(x, y, train_size=0.80)
 
 
 ```python
-clf = DecisionTreeClassifier(criterion='entropy', max_depth=4, min_samples_split=10, min_samples_leaf=8)
+clf = DecisionTreeClassifier()
 clf.fit(xtrain, ytrain)
 ```
 
 
 
 
-    DecisionTreeClassifier(class_weight=None, criterion='entropy', max_depth=4,
+    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=None,
                            max_features=None, max_leaf_nodes=None,
                            min_impurity_decrease=0.0, min_impurity_split=None,
-                           min_samples_leaf=8, min_samples_split=10,
+                           min_samples_leaf=1, min_samples_split=2,
                            min_weight_fraction_leaf=0.0, presort=False,
                            random_state=None, splitter='best')
 
@@ -277,7 +336,7 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.9666666666666667
+    1.0
 
 
 
@@ -304,11 +363,30 @@ clf.score(xtest, ytest) # train score = 100% -> overfitting on training data
 from sklearn.externals.six import StringIO  
 from IPython.display import Image  
 from sklearn.tree import export_graphviz
+from sklearn.metrics import accuracy_score
 import pydotplus
 ```
 
-    /anaconda3/lib/python3.7/site-packages/sklearn/externals/six.py:31: DeprecationWarning: The module is deprecated in version 0.21 and will be removed in version 0.23 since we've dropped support for Python 2.7. Please rely on the official version of six (https://pypi.org/project/six/).
-      "(https://pypi.org/project/six/).", DeprecationWarning)
+
+```python
+print(df.columns[2])
+plt.hist(df[df.columns[2]])
+```
+
+    petal length (cm)
+
+
+
+
+
+    (array([37., 13.,  0.,  3.,  8., 26., 29., 18., 11.,  5.]),
+     array([1.  , 1.59, 2.18, 2.77, 3.36, 3.95, 4.54, 5.13, 5.72, 6.31, 6.9 ]),
+     <a list of 10 Patch objects>)
+
+
+
+
+![png](lesson-plan_files/lesson-plan_21_2.png)
 
 
 
@@ -324,11 +402,136 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_18_0.png)
+![png](lesson-plan_files/lesson-plan_22_0.png)
 
 
+
+### the depth of the search is leading overfitting
+### the multicollinearity could lead to overfitting...lead bias
 
 ### If you're increasing robustness but test score stays stagnant, what does this indicate?
+
+### Let's tune some hyperparameters
+
+
+```python
+clf = DecisionTreeClassifier(min_samples_leaf=8)
+clf.fit(xtrain, ytrain)
+```
+
+
+
+
+    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=None,
+                           max_features=None, max_leaf_nodes=None,
+                           min_impurity_decrease=0.0, min_impurity_split=None,
+                           min_samples_leaf=8, min_samples_split=2,
+                           min_weight_fraction_leaf=0.0, presort=False,
+                           random_state=None, splitter='best')
+
+
+
+
+```python
+clf.score(xtrain, ytrain)
+```
+
+
+
+
+    0.85
+
+
+
+
+```python
+clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
+```
+
+
+
+
+    0.8666666666666667
+
+
+
+
+```python
+dot_data = StringIO()
+export_graphviz(clf, out_file=dot_data,  
+                filled=True, rounded=True,
+                special_characters=True)
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())  
+Image(graph.create_png())
+```
+
+
+
+
+![png](lesson-plan_files/lesson-plan_29_0.png)
+
+
+
+### Still have splits that are overfitting 'chasing' points.
+
+
+```python
+clf = DecisionTreeClassifier(criterion='entropy', splitter='random', min_samples_leaf=10, max_depth=3)
+clf.fit(xtrain, ytrain)
+```
+
+
+
+
+    DecisionTreeClassifier(class_weight=None, criterion='entropy', max_depth=3,
+                           max_features=None, max_leaf_nodes=None,
+                           min_impurity_decrease=0.0, min_impurity_split=None,
+                           min_samples_leaf=10, min_samples_split=2,
+                           min_weight_fraction_leaf=0.0, presort=False,
+                           random_state=None, splitter='random')
+
+
+
+
+```python
+clf.score(xtrain, ytrain)
+```
+
+
+
+
+    0.85
+
+
+
+
+```python
+clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
+```
+
+
+
+
+    0.8666666666666667
+
+
+
+
+```python
+dot_data = StringIO()
+export_graphviz(clf, out_file=dot_data,  
+                filled=True, rounded=True,
+                special_characters=True)
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())  
+Image(graph.create_png())
+```
+
+
+
+
+![png](lesson-plan_files/lesson-plan_34_0.png)
+
+
 
 ### We tuned some hyperparameters, now let's look at attributes
 
@@ -336,7 +539,18 @@ Image(graph.create_png())
 ```python
 feature_importance_vals = clf.feature_importances_
 features = x.columns
+feature_importance_vals, features
 ```
+
+
+
+
+    (array([0.01805655, 0.        , 0.98194345, 0.        ]),
+     Index(['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)',
+            'petal width (cm)'],
+           dtype='object'))
+
+
 
 
 ```python
@@ -346,8 +560,10 @@ plt.show()
 ```
 
 
-![png](lesson-plan_files/lesson-plan_22_0.png)
+![png](lesson-plan_files/lesson-plan_37_0.png)
 
+
+### Multicollinearity makes feature importances impossible to interpret
 
 
 ```python
@@ -357,36 +573,36 @@ scipy.sparse.csr_matrix.todense(clf.decision_path(xtest)) # SHOWS THE NODES THAT
 
 
 
-    matrix([[1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0],
-            [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1]])
+    matrix([[1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 1, 1, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 1, 0, 0],
+            [1, 0, 1, 1, 1, 0, 0],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 1, 1, 0, 0],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 1, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 1, 1, 0, 1, 0]])
 
 
 
