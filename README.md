@@ -1,8 +1,6 @@
 
 ### Questions
-- GraphViz
-- Gini Index
-- Tuning hyperparameters
+- Is entropy exclusive to decision trees? No
 
 ### Objectives
 * Build a decision tree classifier using sklearn
@@ -10,33 +8,35 @@
 * Apply best practices to decision trees
 
 ### What are the parts of a decision tree?
-- Root Node
-    - A Node splits the data based on a feature and a feature-value
-    - How do we determine which feature to use for the root node?
-        - The feature that has the highest correlation with our target
-        - The feature that has the lowest gini index
-- Branches (edges)
-- Leaf Nodes
+- Root Node, what is this? 
+    - whatever we want to start with? features, data, etc
+    - data goes here
+- Branches
+    - node with leaves
+    - conditional statement
+    - splits the data into subsets
+- Interior (Decision) Nodes
+    - contains data 
+- Leaf Node
+    - Node w/o children
+    - Where a decision is made
+    - In the case of classification, a data point gets assigned a label
+    - In the case of regression, a data gets assigned a target value
+    
+![](decision-tree.jpeg)
 
 ### What is a Gini Index and What is Entropy?
-* Entropy - Checking for how messy data is...looking at how many different classifiers are in a population of data.
-* Entropy - Measure of disorder
-* High Entropy -> Low Information Gain
-* High Entropy -> Low Separability
-* Gini Index - Measurement of the purity of a split
-    * Gini Index Low -> High Purity
 
-* What is typically picked for the Root Node of a Decision Tree
-    * 'Best Predictor' - Whatever feature is most important ~ feature with the highest purity (information gain)
-* After that your splits should have higher purity as the tree goes down.
+![](weather.jpeg)
 
 
 ```python
 # Calcualte the gini index for humidity (high normal)
 # gini index -> purity of a split (are we dividing play_yes and play_no well?)
 # 0 = normal, 1 = high
-no_play_humidity = [1, 1, 0, 1, 1] 
-yes_play_humidity = [1, 1, 0, 0, 0, 0, 0, 1, 0] 
+# humidity_play_no = ['high', 'high', 'normal', 'high', 'high']
+humidity_play_no = [1, 1, 0, 1, 1]
+humidity_play_yes = [1, 1, 0, 0, 0, 0, 0, 1, 0]
 
 
 # P(normal humidity|no play)
@@ -44,35 +44,41 @@ no_normal = 0.20 # 1 out 5 -> 0.20^2 = 0.04
 # P(high humidity | no play) 
 no_high = 0.80 # 4 out of 5 -> 0.80^2 = 0.64
 
-# P(normal humdity | yes play)
-yes_normal = 6.0/9.0 # 0.6666....
-# P(high humidity | yes play)
-yes_high = 3.0/9.0 # 0.33333.....
+# P(normal humidity|yes play)
+yes_normal = 6/9 
 
+# P(high humidity|yes play)
+yes_high = 3/9
 
 # Weights the larger probabilities
 # if g << 1 both numbers must be small (close)
 # if g ~ 1 one condition has really high probability
-g_nos = no_normal**2 + no_high**2  # 0.68
+# if our gini index is really close to 1, what does that mean?
+# this means that one of our feature values is dominating our array
 
+# if humidity_play_0 = [1, 1, 1, 1, 1] 
+# P(n|no) = 0.0
+# P(h|no) = 1.0
+gini_play_no = no_normal**2 + no_high**2  # 0.68
+gini_play_no = 1 - gini_play_no
 
 
 # g ~ 1 both numbers must be small (close)
 # g ~ 0 one condition has really high probability
-g_nos = 1 - g_nos
 
-g_yes = yes_normal**2 + yes_high**2 # 0.5555....
-g_yes = 1 - g_yes
+gini_play_yes = yes_normal**2 + yes_high**2 # 0.5555....
+gini_play_yes = 1 - gini_play_yes
 
 
 # gini ~ 1 this means really really impure split
 # gini ~ 0 this means really really pure split
 # weighted average
-gini = g_nos * (5/14) + g_yes*(9/14)
+
+gini = gini_play_no * (2/14) + gini_play_yes*(12/14)
 print("g_humid = {}".format(gini))
 ```
 
-    g_humid = 0.3999999999999999
+    g_humid = 0.42666666666666664
 
 
 ### Outline
@@ -146,7 +152,7 @@ df.head()
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
+      <td>0</td>
       <td>5.1</td>
       <td>3.5</td>
       <td>1.4</td>
@@ -154,7 +160,7 @@ df.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>1</th>
+      <td>1</td>
       <td>4.9</td>
       <td>3.0</td>
       <td>1.4</td>
@@ -162,7 +168,7 @@ df.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>2</th>
+      <td>2</td>
       <td>4.7</td>
       <td>3.2</td>
       <td>1.3</td>
@@ -170,7 +176,7 @@ df.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>3</th>
+      <td>3</td>
       <td>4.6</td>
       <td>3.1</td>
       <td>1.5</td>
@@ -178,7 +184,7 @@ df.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>4</th>
+      <td>4</td>
       <td>5.0</td>
       <td>3.6</td>
       <td>1.4</td>
@@ -207,7 +213,7 @@ df.target.unique()
 
 
 ```python
-df.corr()
+df.corr().abs()
 ```
 
 
@@ -240,41 +246,41 @@ df.corr()
   </thead>
   <tbody>
     <tr>
-      <th>sepal length (cm)</th>
+      <td>sepal length (cm)</td>
       <td>1.000000</td>
-      <td>-0.117570</td>
+      <td>0.117570</td>
       <td>0.871754</td>
       <td>0.817941</td>
       <td>0.782561</td>
     </tr>
     <tr>
-      <th>sepal width (cm)</th>
-      <td>-0.117570</td>
+      <td>sepal width (cm)</td>
+      <td>0.117570</td>
       <td>1.000000</td>
-      <td>-0.428440</td>
-      <td>-0.366126</td>
-      <td>-0.426658</td>
+      <td>0.428440</td>
+      <td>0.366126</td>
+      <td>0.426658</td>
     </tr>
     <tr>
-      <th>petal length (cm)</th>
+      <td>petal length (cm)</td>
       <td>0.871754</td>
-      <td>-0.428440</td>
+      <td>0.428440</td>
       <td>1.000000</td>
       <td>0.962865</td>
       <td>0.949035</td>
     </tr>
     <tr>
-      <th>petal width (cm)</th>
+      <td>petal width (cm)</td>
       <td>0.817941</td>
-      <td>-0.366126</td>
+      <td>0.366126</td>
       <td>0.962865</td>
       <td>1.000000</td>
       <td>0.956547</td>
     </tr>
     <tr>
-      <th>target</th>
+      <td>target</td>
       <td>0.782561</td>
-      <td>-0.426658</td>
+      <td>0.426658</td>
       <td>0.949035</td>
       <td>0.956547</td>
       <td>1.000000</td>
@@ -300,12 +306,12 @@ df.corr()
 
 
 ```python
-x, y = df.drop(['target'], axis=1), df.target
+x, y = df.drop(['target','petal width (cm)'], axis=1), df.target
 ```
 
 
 ```python
-xtrain, xtest, ytrain, ytest = train_test_split(x, y, train_size=0.80)
+xtrain, xtest, ytrain, ytest = train_test_split(x, y, train_size=0.50)
 ```
 
 ### Let's build a decision tree
@@ -342,18 +348,19 @@ clf.score(xtrain, ytrain)
 
 
 ```python
-clf.score(xtest, ytest) # train score = 100% -> overfitting on training data
-
-
-
+clf.score(xtest, ytest) 
 ```
 
 
 
 
-    0.9333333333333333
+    0.96
 
 
+
+### Why do we get overfitting? 
+- Decision Tree Classifier is 'going too far'
+- They're inherently greedy
 
 ### Let's visualize our tree
 [Source is Medium Article](https://medium.com/@rnbrown/creating-and-visualizing-decision-trees-with-python-f8e8fa394176)
@@ -386,7 +393,7 @@ plt.hist(df[df.columns[2]])
 
 
 
-![png](lesson-plan_files/lesson-plan_21_2.png)
+![png](lesson-plan_files/lesson-plan_22_2.png)
 
 
 
@@ -402,7 +409,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_22_0.png)
+![png](lesson-plan_files/lesson-plan_23_0.png)
 
 
 
@@ -415,17 +422,17 @@ Image(graph.create_png())
 
 
 ```python
-clf = DecisionTreeClassifier(min_samples_leaf=8)
+clf = DecisionTreeClassifier(max_depth=2)
 clf.fit(xtrain, ytrain)
 ```
 
 
 
 
-    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=None,
+    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=2,
                            max_features=None, max_leaf_nodes=None,
                            min_impurity_decrease=0.0, min_impurity_split=None,
-                           min_samples_leaf=8, min_samples_split=2,
+                           min_samples_leaf=1, min_samples_split=2,
                            min_weight_fraction_leaf=0.0, presort=False,
                            random_state=None, splitter='best')
 
@@ -439,19 +446,19 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.85
+    0.96
 
 
 
 
 ```python
-clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
+clf.score(xtest, ytest) 
 ```
 
 
 
 
-    0.8666666666666667
+    0.96
 
 
 
@@ -468,7 +475,54 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_29_0.png)
+![png](lesson-plan_files/lesson-plan_30_0.png)
+
+
+
+
+```python
+clf = DecisionTreeClassifier(min_samples_leaf=10)
+clf.fit(xtrain, ytrain)
+```
+
+
+
+
+    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=None,
+                           max_features=None, max_leaf_nodes=None,
+                           min_impurity_decrease=0.0, min_impurity_split=None,
+                           min_samples_leaf=10, min_samples_split=2,
+                           min_weight_fraction_leaf=0.0, presort=False,
+                           random_state=None, splitter='best')
+
+
+
+
+```python
+clf.score(xtrain, ytrain), clf.score(xtest, ytest)
+```
+
+
+
+
+    (0.96, 0.96)
+
+
+
+
+```python
+dot_data = StringIO()
+export_graphviz(clf, out_file=dot_data,  
+                filled=True, rounded=True,
+                special_characters=True)
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())  
+Image(graph.create_png())
+```
+
+
+
+
+![png](lesson-plan_files/lesson-plan_33_0.png)
 
 
 
@@ -500,19 +554,19 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.85
+    0.84
 
 
 
 
 ```python
-clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
+clf.score(xtest, ytest) 
 ```
 
 
 
 
-    0.8666666666666667
+    0.7733333333333333
 
 
 
@@ -529,7 +583,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_34_0.png)
+![png](lesson-plan_files/lesson-plan_38_0.png)
 
 
 
@@ -545,7 +599,7 @@ feature_importance_vals, features
 
 
 
-    (array([0.01805655, 0.        , 0.98194345, 0.        ]),
+    (array([0.        , 0.        , 0.54409135, 0.45590865]),
      Index(['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)',
             'petal width (cm)'],
            dtype='object'))
@@ -560,7 +614,7 @@ plt.show()
 ```
 
 
-![png](lesson-plan_files/lesson-plan_37_0.png)
+![png](lesson-plan_files/lesson-plan_41_0.png)
 
 
 ### Multicollinearity makes feature importances impossible to interpret
@@ -573,36 +627,81 @@ scipy.sparse.csr_matrix.todense(clf.decision_path(xtest)) # SHOWS THE NODES THAT
 
 
 
-    matrix([[1, 0, 1, 0, 0, 0, 1],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 0, 0, 0, 1],
-            [1, 0, 1, 0, 0, 0, 1],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 0, 0, 0, 1],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 1, 1, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 0, 0],
-            [1, 0, 1, 1, 1, 0, 0],
-            [1, 0, 1, 0, 0, 0, 1],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 0, 0, 0, 1],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 1, 1, 0, 0],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 0, 0],
-            [1, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 0, 1, 0],
-            [1, 0, 1, 1, 0, 1, 0]])
+    matrix([[1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0]])
 
 
 
