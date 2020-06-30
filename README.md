@@ -1,8 +1,5 @@
 
 ### Questions
-- GraphViz
-- Gini Index
-- Tuning hyperparameters
 
 ### Objectives
 * Build a decision tree classifier using sklearn
@@ -10,33 +7,24 @@
 * Apply best practices to decision trees
 
 ### What are the parts of a decision tree?
-- Root Node
-    - A Node splits the data based on a feature and a feature-value
-    - How do we determine which feature to use for the root node?
-        - The feature that has the highest correlation with our target
-        - The feature that has the lowest gini index
-- Branches (edges)
-- Leaf Nodes
+Nodes and Edges
+
+<img src="decision-tree.jpeg" width="50%"/>
+
+# The Scenario
+- You are given the following data and asked to predict if someone will play outside or not based on the features
+
+<img src="data.png" width="50%"/>
 
 ### What is a Gini Index and What is Entropy?
-* Entropy - Checking for how messy data is...looking at how many different classifiers are in a population of data.
-* Entropy - Measure of disorder
-* High Entropy -> Low Information Gain
-* High Entropy -> Low Separability
-* Gini Index - Measurement of the purity of a split
-    * Gini Index Low -> High Purity
-
-* What is typically picked for the Root Node of a Decision Tree
-    * 'Best Predictor' - Whatever feature is most important ~ feature with the highest purity (information gain)
-* After that your splits should have higher purity as the tree goes down.
 
 
 ```python
-# Calcualte the gini index for humidity (high normal)
+# Calculate the gini index for humidity (high (1)  or normal (0))
 # gini index -> purity of a split (are we dividing play_yes and play_no well?)
 # 0 = normal, 1 = high
-no_play_humidity = [1, 1, 0, 1, 1] 
-yes_play_humidity = [1, 1, 0, 0, 0, 0, 0, 1, 0] 
+no_play_humidity = [1, 1, 0, 1, 1] # P(Humid|0) = 0.80
+yes_play_humidity = [1, 1, 0, 0, 0, 0, 0, 1, 0] # P(Humid|1) = 3/9
 
 
 # P(normal humidity|no play)
@@ -50,10 +38,15 @@ yes_normal = 6.0/9.0 # 0.6666....
 yes_high = 3.0/9.0 # 0.33333.....
 
 
-# Weights the larger probabilities
-# if g << 1 both numbers must be small (close)
-# if g ~ 1 one condition has really high probability
+
+# calculate the purity of the 'no' data
 g_nos = no_normal**2 + no_high**2  # 0.68
+
+# what does it mean if g_nos << 1
+# the feature is evenly represented in our target (which is bad)
+
+# what does it mean if g_nos~1?
+# splitting our target and looking at our feature, we see a feature value that is more dominant
 
 
 
@@ -74,6 +67,15 @@ print("g_humid = {}".format(gini))
 
     g_humid = 0.3999999999999999
 
+
+# Are there any pros/cons that you're noticing with this? 
+* Pros
+    * Columns don't necessarily need to be independent (but in ds you want them to be)
+    * Multicollinearity is no longer a thing
+* Cons
+    * Low sample size leads to high variability
+    * Low sample sizes leads to bias
+    * Greedy/Overfitting
 
 ### Outline
 * Discuss Gini Index/Entropy
@@ -105,8 +107,10 @@ def create_df_load_set(load_set):
     data = dataset.data
     columns = dataset.feature_names
     target = dataset.target
+    target_names = dataset.target_names
     df = pd.DataFrame(data, columns=columns)
     df['target'] = target
+    df['target_names'] = [target_names[i] for i in target]
     return df
 ```
 
@@ -142,48 +146,54 @@ df.head()
       <th>petal length (cm)</th>
       <th>petal width (cm)</th>
       <th>target</th>
+      <th>target_names</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
+      <td>0</td>
       <td>5.1</td>
       <td>3.5</td>
       <td>1.4</td>
       <td>0.2</td>
       <td>0</td>
+      <td>setosa</td>
     </tr>
     <tr>
-      <th>1</th>
+      <td>1</td>
       <td>4.9</td>
       <td>3.0</td>
       <td>1.4</td>
       <td>0.2</td>
       <td>0</td>
+      <td>setosa</td>
     </tr>
     <tr>
-      <th>2</th>
+      <td>2</td>
       <td>4.7</td>
       <td>3.2</td>
       <td>1.3</td>
       <td>0.2</td>
       <td>0</td>
+      <td>setosa</td>
     </tr>
     <tr>
-      <th>3</th>
+      <td>3</td>
       <td>4.6</td>
       <td>3.1</td>
       <td>1.5</td>
       <td>0.2</td>
       <td>0</td>
+      <td>setosa</td>
     </tr>
     <tr>
-      <th>4</th>
+      <td>4</td>
       <td>5.0</td>
       <td>3.6</td>
       <td>1.4</td>
       <td>0.2</td>
       <td>0</td>
+      <td>setosa</td>
     </tr>
   </tbody>
 </table>
@@ -193,13 +203,13 @@ df.head()
 
 
 ```python
-df.target.unique()
+df.target_names.unique()
 ```
 
 
 
 
-    array([0, 1, 2])
+    array(['setosa', 'versicolor', 'virginica'], dtype=object)
 
 
 
@@ -240,7 +250,7 @@ df.corr()
   </thead>
   <tbody>
     <tr>
-      <th>sepal length (cm)</th>
+      <td>sepal length (cm)</td>
       <td>1.000000</td>
       <td>-0.117570</td>
       <td>0.871754</td>
@@ -248,7 +258,7 @@ df.corr()
       <td>0.782561</td>
     </tr>
     <tr>
-      <th>sepal width (cm)</th>
+      <td>sepal width (cm)</td>
       <td>-0.117570</td>
       <td>1.000000</td>
       <td>-0.428440</td>
@@ -256,7 +266,7 @@ df.corr()
       <td>-0.426658</td>
     </tr>
     <tr>
-      <th>petal length (cm)</th>
+      <td>petal length (cm)</td>
       <td>0.871754</td>
       <td>-0.428440</td>
       <td>1.000000</td>
@@ -264,7 +274,7 @@ df.corr()
       <td>0.949035</td>
     </tr>
     <tr>
-      <th>petal width (cm)</th>
+      <td>petal width (cm)</td>
       <td>0.817941</td>
       <td>-0.366126</td>
       <td>0.962865</td>
@@ -272,7 +282,7 @@ df.corr()
       <td>0.956547</td>
     </tr>
     <tr>
-      <th>target</th>
+      <td>target</td>
       <td>0.782561</td>
       <td>-0.426658</td>
       <td>0.949035</td>
@@ -286,21 +296,10 @@ df.corr()
 
 
 ### What do we notice about the correlation matrix?
-- petalwidth has highest correlation with target
-- we have multicollinearity with petal length and petal width
-- sepal length and petal length and petal width
-
-
-### Is that a problem?
-- In Linear Regression this is a problem
-- In Logistic Regression this is also a problem
-
-- Mathematically, multicollinearity isn't an issue for non parametric methods. 
-- Determine that your data is conditioned
 
 
 ```python
-x, y = df.drop(['target'], axis=1), df.target
+x, y = df.drop(['target', 'target_names'], axis=1), df.target_names
 ```
 
 
@@ -312,18 +311,18 @@ xtrain, xtest, ytrain, ytest = train_test_split(x, y, train_size=0.80)
 
 
 ```python
-clf = DecisionTreeClassifier()
+clf = DecisionTreeClassifier() # Betty Crocker DT
 clf.fit(xtrain, ytrain)
 ```
 
 
 
 
-    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=None,
-                           max_features=None, max_leaf_nodes=None,
+    DecisionTreeClassifier(ccp_alpha=0.0, class_weight=None, criterion='gini',
+                           max_depth=None, max_features=None, max_leaf_nodes=None,
                            min_impurity_decrease=0.0, min_impurity_split=None,
                            min_samples_leaf=1, min_samples_split=2,
-                           min_weight_fraction_leaf=0.0, presort=False,
+                           min_weight_fraction_leaf=0.0, presort='deprecated',
                            random_state=None, splitter='best')
 
 
@@ -344,14 +343,12 @@ clf.score(xtrain, ytrain)
 ```python
 clf.score(xtest, ytest) # train score = 100% -> overfitting on training data
 
-
-
 ```
 
 
 
 
-    0.9333333333333333
+    0.9
 
 
 
@@ -367,26 +364,39 @@ from sklearn.metrics import accuracy_score
 import pydotplus
 ```
 
+    /Users/rafael/anaconda3/envs/flatiron-env/lib/python3.6/site-packages/sklearn/externals/six.py:31: FutureWarning: The module is deprecated in version 0.21 and will be removed in version 0.23 since we've dropped support for Python 2.7. Please rely on the official version of six (https://pypi.org/project/six/).
+      "(https://pypi.org/project/six/).", FutureWarning)
+
+
 
 ```python
-print(df.columns[2])
-plt.hist(df[df.columns[2]])
+df.columns
 ```
 
-    petal length (cm)
+
+
+
+    Index(['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)',
+           'petal width (cm)', 'target', 'target_names'],
+          dtype='object')
 
 
 
 
-
-    (array([37., 13.,  0.,  3.,  8., 26., 29., 18., 11.,  5.]),
-     array([1.  , 1.59, 2.18, 2.77, 3.36, 3.95, 4.54, 5.13, 5.72, 6.31, 6.9 ]),
-     <a list of 10 Patch objects>)
-
-
+```python
+col = df.columns[2]
+sns.violinplot(x=col, y='target_names', data=df)
+```
 
 
-![png](lesson-plan_files/lesson-plan_21_2.png)
+
+
+    <matplotlib.axes._subplots.AxesSubplot at 0x1a27870dd8>
+
+
+
+
+![png](lesson-plan_files/lesson-plan_24_1.png)
 
 
 
@@ -402,7 +412,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_22_0.png)
+![png](lesson-plan_files/lesson-plan_25_0.png)
 
 
 
@@ -415,18 +425,18 @@ Image(graph.create_png())
 
 
 ```python
-clf = DecisionTreeClassifier(min_samples_leaf=8)
+clf = DecisionTreeClassifier(min_samples_leaf=int(df.shape[0]/10))
 clf.fit(xtrain, ytrain)
 ```
 
 
 
 
-    DecisionTreeClassifier(class_weight=None, criterion='gini', max_depth=None,
-                           max_features=None, max_leaf_nodes=None,
+    DecisionTreeClassifier(ccp_alpha=0.0, class_weight=None, criterion='gini',
+                           max_depth=None, max_features=None, max_leaf_nodes=None,
                            min_impurity_decrease=0.0, min_impurity_split=None,
-                           min_samples_leaf=8, min_samples_split=2,
-                           min_weight_fraction_leaf=0.0, presort=False,
+                           min_samples_leaf=15, min_samples_split=2,
+                           min_weight_fraction_leaf=0.0, presort='deprecated',
                            random_state=None, splitter='best')
 
 
@@ -439,7 +449,7 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.85
+    0.875
 
 
 
@@ -451,7 +461,7 @@ clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
 
 
 
-    0.8666666666666667
+    0.9333333333333333
 
 
 
@@ -468,7 +478,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_29_0.png)
+![png](lesson-plan_files/lesson-plan_32_0.png)
 
 
 
@@ -476,18 +486,21 @@ Image(graph.create_png())
 
 
 ```python
-clf = DecisionTreeClassifier(criterion='entropy', splitter='random', min_samples_leaf=10, max_depth=3)
+clf = DecisionTreeClassifier(criterion='gini', 
+                             splitter='random', 
+                             min_samples_leaf=int(xtrain.shape[0]/10), 
+                             max_depth=3)
 clf.fit(xtrain, ytrain)
 ```
 
 
 
 
-    DecisionTreeClassifier(class_weight=None, criterion='entropy', max_depth=3,
-                           max_features=None, max_leaf_nodes=None,
+    DecisionTreeClassifier(ccp_alpha=0.0, class_weight=None, criterion='gini',
+                           max_depth=3, max_features=None, max_leaf_nodes=None,
                            min_impurity_decrease=0.0, min_impurity_split=None,
-                           min_samples_leaf=10, min_samples_split=2,
-                           min_weight_fraction_leaf=0.0, presort=False,
+                           min_samples_leaf=12, min_samples_split=2,
+                           min_weight_fraction_leaf=0.0, presort='deprecated',
                            random_state=None, splitter='random')
 
 
@@ -500,7 +513,7 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.85
+    0.875
 
 
 
@@ -512,7 +525,7 @@ clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
 
 
 
-    0.8666666666666667
+    0.9333333333333333
 
 
 
@@ -529,7 +542,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_34_0.png)
+![png](lesson-plan_files/lesson-plan_37_0.png)
 
 
 
@@ -545,7 +558,7 @@ feature_importance_vals, features
 
 
 
-    (array([0.01805655, 0.        , 0.98194345, 0.        ]),
+    (array([0.        , 0.        , 0.37138394, 0.62861606]),
      Index(['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)',
             'petal width (cm)'],
            dtype='object'))
@@ -560,7 +573,160 @@ plt.show()
 ```
 
 
-![png](lesson-plan_files/lesson-plan_37_0.png)
+![png](lesson-plan_files/lesson-plan_40_0.png)
+
+
+
+```python
+from sklearn.preprocessing import OneHotEncoder
+```
+
+
+```python
+encoder = OneHotEncoder()
+```
+
+
+```python
+encoder.fit(y.values.reshape(-1, 1))
+```
+
+
+
+
+    OneHotEncoder(categories='auto', drop=None, dtype=<class 'numpy.float64'>,
+                  handle_unknown='error', sparse=True)
+
+
+
+
+```python
+ytest_enc = encoder.transform(ytest.values.reshape(-1, 1))
+ytest_enc
+```
+
+
+
+
+    <30x3 sparse matrix of type '<class 'numpy.float64'>'
+    	with 30 stored elements in Compressed Sparse Row format>
+
+
+
+
+```python
+y_score = clf.predict_proba(xtest)
+y_score
+```
+
+
+
+
+    array([[0.        , 1.        , 0.        ],
+           [0.        , 1.        , 0.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.        , 1.        , 0.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 1.        , 0.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.        , 0.        , 1.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.        , 1.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.        , 0.57142857, 0.42857143],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.57142857, 0.42857143],
+           [0.        , 0.        , 1.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.        , 1.        ],
+           [0.        , 0.        , 1.        ],
+           [0.86666667, 0.13333333, 0.        ],
+           [0.        , 0.57142857, 0.42857143]])
+
+
+
+
+```python
+setosas = ytest_enc[:, 0]
+```
+
+
+```python
+setosas.todense().ravel()
+y_score[:, 0]
+```
+
+
+
+
+    array([0.        , 0.        , 0.86666667, 0.86666667, 0.        ,
+           0.        , 0.        , 0.86666667, 0.        , 0.86666667,
+           0.        , 0.        , 0.        , 0.86666667, 0.        ,
+           0.86666667, 0.        , 0.        , 0.        , 0.86666667,
+           0.86666667, 0.86666667, 0.        , 0.        , 0.86666667,
+           0.86666667, 0.        , 0.        , 0.86666667, 0.        ])
+
+
+
+
+```python
+from sklearn.metrics import roc_auc_score, roc_curve
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+
+
+for i in range(3):
+    actuals = ytest_enc[:, i]
+    actuals = actuals.todense().ravel()
+    fpr[i], tpr[i], _ = roc_curve(actuals, y_score[:, i].ravel())
+    roc_auc[i] = auc(fpr[i], tpr[i])
+
+# Compute micro-average ROC curve and ROC area
+fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), y_score.ravel())
+roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+```
+
+
+    ---------------------------------------------------------------------------
+
+    ValueError                                Traceback (most recent call last)
+
+    <ipython-input-80-30eb052caa16> in <module>
+          8     actuals = ytest_enc[:, i]
+          9     actuals = actuals.todense().ravel()
+    ---> 10     fpr[i], tpr[i], _ = roc_curve(actuals, y_score[:, i].ravel())
+         11     roc_auc[i] = auc(fpr[i], tpr[i])
+         12 
+
+
+    ~/anaconda3/envs/flatiron-env/lib/python3.6/site-packages/sklearn/metrics/_ranking.py in roc_curve(y_true, y_score, pos_label, sample_weight, drop_intermediate)
+        769     """
+        770     fps, tps, thresholds = _binary_clf_curve(
+    --> 771         y_true, y_score, pos_label=pos_label, sample_weight=sample_weight)
+        772 
+        773     # Attempt to drop thresholds corresponding to points in between and
+
+
+    ~/anaconda3/envs/flatiron-env/lib/python3.6/site-packages/sklearn/metrics/_ranking.py in _binary_clf_curve(y_true, y_score, pos_label, sample_weight)
+        534     if not (y_type == "binary" or
+        535             (y_type == "multiclass" and pos_label is not None)):
+    --> 536         raise ValueError("{0} format is not supported".format(y_type))
+        537 
+        538     check_consistent_length(y_true, y_score, sample_weight)
+
+
+    ValueError: multilabel-indicator format is not supported
 
 
 ### Multicollinearity makes feature importances impossible to interpret
