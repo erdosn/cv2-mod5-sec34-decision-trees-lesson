@@ -1,5 +1,36 @@
 
-### Questions
+### Things you already know! 
+* aim to separate the data and group them into classes
+* information gain is the difference between parent entropy and child entropy
+* a series of if-else statements
+* 3 nodes
+    * root, interior and leaf
+* at each step we want to decrease the entropy
+* each feature is looked at individually for each step
+    * each step, information gain/gini index is calculate for each feature
+    * tree populates the node with the feauture that has the best score
+* what's being observed in the root node? 
+    * all the training data, then picks a feature to split on
+    * splits our training data
+* for the next nodes what's being observed?
+    * now you calculate scores for the subsets of data and repeat
+* multicollinearity could matter with feature importance
+* the training process can be generalized as recursive
+* the last nodes of every branch of a decision tree are called leaf nodes
+
+### Questions 
+* What's a good scenario to use a decision trees? 
+* When you want to investigate feature importance? 
+* The feature importance can lead the EDA process
+* It's a fast testing process but slow to train
+* A lot of features - it's a good first step, but it's computationally expensive
+* You never really need to calculate entropy by hand
+
+
+### Some important concepts
+* hyperparameter tuning is huge, because of the amount of hyperparameters
+* tuning using a confusion matrix
+* tuning using a specific metric
 
 ### Objectives
 * Build a decision tree classifier using sklearn
@@ -16,15 +47,40 @@ Nodes and Edges
 
 <img src="data.png" width="50%"/>
 
+
+```python
+# Data Description
+"""
+Outlook: Sunny, Overcase, Rain
+Temp: Hot, Mild, Cool
+Humidity: High, Normal
+Wind: Weak, Strong
+
+Target
+Play: Yes, No
+"""
+print()
+```
+
+    
+
+
 ### What is a Gini Index and What is Entropy?
+
+We start a decision tree, the first thing to make is our root node. 
+
+How do we determine which feature will be the root node? We calculate gini index for each feature. 
+
+
+Then we use the feature with the best gini index
 
 
 ```python
 # Calculate the gini index for humidity (high (1)  or normal (0))
 # gini index -> purity of a split (are we dividing play_yes and play_no well?)
 # 0 = normal, 1 = high
-no_play_humidity = [1, 1, 0, 1, 1] # P(Humid|0) = 0.80
-yes_play_humidity = [1, 1, 0, 0, 0, 0, 0, 1, 0] # P(Humid|1) = 3/9
+no_play_humidity =  [1, 1, 0, 1, 1] # P(High Humidity|0) = 0.80
+yes_play_humidity =  [1, 1, 0, 0, 0, 0, 0, 1, 0] # P(High Humidity|1) = 3/9 = 0.33...
 
 
 # P(normal humidity|no play)
@@ -41,6 +97,11 @@ yes_high = 3.0/9.0 # 0.33333.....
 
 # calculate the purity of the 'no' data
 g_nos = no_normal**2 + no_high**2  # 0.68
+g_nos_max = 1 # if no_normal = 1 and no_high = 0
+g_nos_min = 0.5 # if no_normal = 0.5 and no_high = 0.5 -> worst case scenario
+
+
+
 
 # what does it mean if g_nos << 1
 # the feature is evenly represented in our target (which is bad)
@@ -61,7 +122,7 @@ g_yes = 1 - g_yes
 # gini ~ 1 this means really really impure split
 # gini ~ 0 this means really really pure split
 # weighted average
-gini = g_nos * (5/14) + g_yes*(9/14)
+gini = g_nos * (5/14) + g_yes * (9/14)
 print("g_humid = {}".format(gini))
 ```
 
@@ -203,6 +264,20 @@ df.head()
 
 
 ```python
+sns.pairplot(data=df, hue='target_names')
+plt.show()
+```
+
+    /Users/rafael/anaconda3/envs/flatiron-env/lib/python3.6/site-packages/seaborn/distributions.py:288: UserWarning: Data must have variance to compute a kernel density estimate.
+      warnings.warn(msg, UserWarning)
+
+
+
+![png](lesson-plan_files/lesson-plan_13_1.png)
+
+
+
+```python
 df.target_names.unique()
 ```
 
@@ -308,6 +383,7 @@ xtrain, xtest, ytrain, ytest = train_test_split(x, y, train_size=0.80)
 ```
 
 ### Let's build a decision tree
+* the deeper the tree the more prone to overfitting - literally chasing down every point 
 
 
 ```python
@@ -364,10 +440,6 @@ from sklearn.metrics import accuracy_score
 import pydotplus
 ```
 
-    /Users/rafael/anaconda3/envs/flatiron-env/lib/python3.6/site-packages/sklearn/externals/six.py:31: FutureWarning: The module is deprecated in version 0.21 and will be removed in version 0.23 since we've dropped support for Python 2.7. Please rely on the official version of six (https://pypi.org/project/six/).
-      "(https://pypi.org/project/six/).", FutureWarning)
-
-
 
 ```python
 df.columns
@@ -391,12 +463,12 @@ sns.violinplot(x=col, y='target_names', data=df)
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x1a27870dd8>
+    <matplotlib.axes._subplots.AxesSubplot at 0x1a1e27aef0>
 
 
 
 
-![png](lesson-plan_files/lesson-plan_24_1.png)
+![png](lesson-plan_files/lesson-plan_27_1.png)
 
 
 
@@ -412,7 +484,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_25_0.png)
+![png](lesson-plan_files/lesson-plan_28_0.png)
 
 
 
@@ -425,7 +497,7 @@ Image(graph.create_png())
 
 
 ```python
-clf = DecisionTreeClassifier(min_samples_leaf=int(df.shape[0]/10))
+clf = DecisionTreeClassifier(min_samples_leaf=int(xtrain.shape[0]/5))
 clf.fit(xtrain, ytrain)
 ```
 
@@ -435,7 +507,7 @@ clf.fit(xtrain, ytrain)
     DecisionTreeClassifier(ccp_alpha=0.0, class_weight=None, criterion='gini',
                            max_depth=None, max_features=None, max_leaf_nodes=None,
                            min_impurity_decrease=0.0, min_impurity_split=None,
-                           min_samples_leaf=15, min_samples_split=2,
+                           min_samples_leaf=24, min_samples_split=2,
                            min_weight_fraction_leaf=0.0, presort='deprecated',
                            random_state=None, splitter='best')
 
@@ -449,7 +521,7 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.875
+    0.975
 
 
 
@@ -461,7 +533,7 @@ clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
 
 
 
-    0.9333333333333333
+    0.9
 
 
 
@@ -478,7 +550,19 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_32_0.png)
+![png](lesson-plan_files/lesson-plan_35_0.png)
+
+
+
+
+```python
+xtrain.shape
+```
+
+
+
+
+    (120, 4)
 
 
 
@@ -486,8 +570,20 @@ Image(graph.create_png())
 
 
 ```python
+xtrain.drop(columns=['petal length (cm)'], inplace=True)
+xtest.drop(columns=['petal length (cm)'], inplace=True)
+```
+
+    /Users/rafael/anaconda3/envs/flatiron-env/lib/python3.6/site-packages/pandas/core/frame.py:4102: SettingWithCopyWarning: 
+    A value is trying to be set on a copy of a slice from a DataFrame
+    
+    See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+      errors=errors,
+
+
+
+```python
 clf = DecisionTreeClassifier(criterion='gini', 
-                             splitter='random', 
                              min_samples_leaf=int(xtrain.shape[0]/10), 
                              max_depth=3)
 clf.fit(xtrain, ytrain)
@@ -501,7 +597,7 @@ clf.fit(xtrain, ytrain)
                            min_impurity_decrease=0.0, min_impurity_split=None,
                            min_samples_leaf=12, min_samples_split=2,
                            min_weight_fraction_leaf=0.0, presort='deprecated',
-                           random_state=None, splitter='random')
+                           random_state=None, splitter='best')
 
 
 
@@ -513,7 +609,7 @@ clf.score(xtrain, ytrain)
 
 
 
-    0.875
+    0.975
 
 
 
@@ -525,7 +621,7 @@ clf.score(xtest, ytest) # train score = 96% -> overfitting on training data
 
 
 
-    0.9333333333333333
+    0.9
 
 
 
@@ -542,7 +638,7 @@ Image(graph.create_png())
 
 
 
-![png](lesson-plan_files/lesson-plan_37_0.png)
+![png](lesson-plan_files/lesson-plan_42_0.png)
 
 
 
@@ -551,17 +647,15 @@ Image(graph.create_png())
 
 ```python
 feature_importance_vals = clf.feature_importances_
-features = x.columns
+features = xtrain.columns
 feature_importance_vals, features
 ```
 
 
 
 
-    (array([0.        , 0.        , 0.37138394, 0.62861606]),
-     Index(['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)',
-            'petal width (cm)'],
-           dtype='object'))
+    (array([0.00156462, 0.        , 0.99843538]),
+     Index(['sepal length (cm)', 'sepal width (cm)', 'petal width (cm)'], dtype='object'))
 
 
 
@@ -573,8 +667,147 @@ plt.show()
 ```
 
 
-![png](lesson-plan_files/lesson-plan_40_0.png)
+![png](lesson-plan_files/lesson-plan_45_0.png)
 
+
+# A typical thing to do at this point
+# Is to do a gridsearchcv
+
+
+```python
+from sklearn.model_selection import GridSearchCV
+```
+
+
+```python
+dt = DecisionTreeClassifier()
+```
+
+
+```python
+params = {"criterion":['gini', 'entropy'],
+          "splitter":['best', 'random'],
+          "max_depth":[3, 5, 10],
+          "min_samples_split":[5, 10, 20]}
+```
+
+
+```python
+gs_dt = GridSearchCV(dt, param_grid=params, n_jobs=-1, verbose=2, cv=5)
+```
+
+
+```python
+gs_dt.fit(x, y)
+```
+
+    Fitting 5 folds for each of 36 candidates, totalling 180 fits
+
+
+    [Parallel(n_jobs=-1)]: Using backend LokyBackend with 8 concurrent workers.
+    [Parallel(n_jobs=-1)]: Done  25 tasks      | elapsed:    3.4s
+    [Parallel(n_jobs=-1)]: Done 180 out of 180 | elapsed:    4.0s finished
+
+
+
+
+
+    GridSearchCV(cv=5, error_score=nan,
+                 estimator=DecisionTreeClassifier(ccp_alpha=0.0, class_weight=None,
+                                                  criterion='gini', max_depth=None,
+                                                  max_features=None,
+                                                  max_leaf_nodes=None,
+                                                  min_impurity_decrease=0.0,
+                                                  min_impurity_split=None,
+                                                  min_samples_leaf=1,
+                                                  min_samples_split=2,
+                                                  min_weight_fraction_leaf=0.0,
+                                                  presort='deprecated',
+                                                  random_state=None,
+                                                  splitter='best'),
+                 iid='deprecated', n_jobs=-1,
+                 param_grid={'criterion': ['gini', 'entropy'],
+                             'max_depth': [3, 5, 10],
+                             'min_samples_split': [5, 10, 20],
+                             'splitter': ['best', 'random']},
+                 pre_dispatch='2*n_jobs', refit=True, return_train_score=False,
+                 scoring=None, verbose=2)
+
+
+
+
+```python
+dt_best = gs_dt.best_estimator_
+```
+
+
+```python
+dt_best.score(xtrain, ytrain), dt_best.score(xtest, ytest)
+```
+
+
+
+
+    (0.975, 0.9666666666666667)
+
+
+
+
+```python
+dot_data = StringIO()
+export_graphviz(dt_best, out_file=dot_data,  
+                filled=True, rounded=True,
+                special_characters=True)
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())  
+Image(graph.create_png())
+```
+
+
+
+
+![png](lesson-plan_files/lesson-plan_54_0.png)
+
+
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
+
+
+```python
+
+```
 
 
 ```python
